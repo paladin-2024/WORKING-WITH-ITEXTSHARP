@@ -3,27 +3,38 @@ package gui;
 import javax.swing.*;
 import java.awt.*;
 
-public class MainFrame extends JFrame {
-    private JTable employeeTable;
+public class MainFrame {
+    private JFrame frame;
+    private JTabbedPane tabbedPane;
+    private EmployeePanel employeePanel;
+    private DepartmentPanel departmentPanel;
+    private ReportPanel reportPanel;
 
     public MainFrame() {
-        setTitle("Employee Management System");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(800, 600);
-        setLocationRelativeTo(null); // Center the frame on the screen
+        frame = new JFrame("Employee Management System");
+        frame.setSize(800, 600);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLocationRelativeTo(null);
 
-        // Initialize the JTable
-        employeeTable = new JTable();
+        initComponents();
+    }
 
-        // Create panels for Load and Export functionalities
-        LoadDataPanel loadDataPanel = new LoadDataPanel(employeeTable);
-        ExportToPDFPanel exportToPDFPanel = new ExportToPDFPanel(employeeTable);
+    private void initComponents() {
+        tabbedPane = new JTabbedPane();
 
-        // Add components to the main frame
-        setLayout(new BorderLayout());
-        add(new JScrollPane(employeeTable), BorderLayout.CENTER); // Table in the center
-        add(loadDataPanel, BorderLayout.NORTH); // Load Data Panel at the top
-        add(exportToPDFPanel, BorderLayout.SOUTH); // Export to PDF Panel at the bottom
+        employeePanel = new EmployeePanel();
+        departmentPanel = new DepartmentPanel();
+        reportPanel = new ReportPanel();
+
+        tabbedPane.addTab("Employees", employeePanel.getPanel());
+        tabbedPane.addTab("Departments", departmentPanel.getPanel());
+        tabbedPane.addTab("Reports", reportPanel.getPanel());
+
+        frame.add(tabbedPane, BorderLayout.CENTER);
+    }
+
+    public void show() {
+        frame.setVisible(true);
     }
 
 }

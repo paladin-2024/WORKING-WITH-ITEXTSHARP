@@ -1,7 +1,11 @@
 module GUI {
     exports gui;
+    exports util;
     requires Utils;
-    requires Models;
-    requires Database;
+    requires java.sql;
+    requires itextpdf;
+    requires kernel;
+    requires layout;
+    requires jdk.hotspot.agent;
     requires java.desktop;
 }

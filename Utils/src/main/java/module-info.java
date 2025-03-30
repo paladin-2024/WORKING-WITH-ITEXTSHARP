@@ -1,6 +1,8 @@
 module Utils {
     requires java.desktop;
-    requires Models;
     requires itextpdf;
+    requires layout;
+    requires io;
+    requires kernel;
     exports utils;
 }

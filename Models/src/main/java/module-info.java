@@ -1,3 +1,0 @@
-module Models {
-    exports models;
-}

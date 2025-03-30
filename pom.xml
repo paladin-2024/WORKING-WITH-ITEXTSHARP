@@ -9,10 +9,9 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
-        <module>Database</module>
         <module>GUI</module>
         <module>Utils</module>
-        <module>Models</module>
+        <module>Core</module>
     </modules>
 
     <build>
