@@ -1,10 +1,9 @@
-package gui;
+package gui.dialog;
 
 import model.Department;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class DepartmentDialog {
     private final JDialog dialog;

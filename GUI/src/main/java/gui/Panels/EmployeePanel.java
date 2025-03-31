@@ -1,6 +1,8 @@
-package gui;
+package gui.Panels;
 
 import database.EmployeeDAO;
+import gui.TableModel.EmployeeTableModel;
+import gui.dialog.EmployeeDialog;
 import model.Employee;
 import javax.swing.*;
 import java.awt.*;

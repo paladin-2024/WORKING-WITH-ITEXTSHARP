@@ -1,4 +1,4 @@
-package gui;
+package gui.dialog;
 
 import model.Employee;
 import javax.swing.*;

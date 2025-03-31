@@ -1,6 +1,9 @@
 module GUI {
     exports gui;
     exports util;
+    exports gui.Panels;
+    exports gui.dialog;
+    exports gui.TableModel;
     requires Utils;
     requires itextpdf;
     requires kernel;

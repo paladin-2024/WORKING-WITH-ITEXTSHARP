@@ -1,6 +1,8 @@
-package gui;
+package gui.Panels;
 
 import database.DepartmentDAO;
+import gui.dialog.DepartmentDialog;
+import gui.TableModel.DepartmentTableModel;
 import model.Department;
 import javax.swing.*;
 import javax.swing.table.TableModel;

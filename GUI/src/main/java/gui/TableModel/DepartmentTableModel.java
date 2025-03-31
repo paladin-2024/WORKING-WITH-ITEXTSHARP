@@ -1,4 +1,4 @@
-package gui;
+package gui.TableModel;
 
 import model.Department;
 import javax.swing.table.AbstractTableModel;

@@ -1,5 +1,7 @@
 package gui;
 
+import gui.Panels.MainFrame;
+
 import javax.swing.*;
 
 public class Main {
