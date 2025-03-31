@@ -41,11 +41,11 @@ public class DepartmentDialog {
 
     private void setupLayout() {
         JPanel mainPanel = new JPanel(new GridLayout(3, 2, 5, 5));
-        mainPanel.add(new JLabel("Name:"));
+        mainPanel.add(new JLabel("Name :"));
         mainPanel.add(nameField);
-        mainPanel.add(new JLabel("Location:"));
+        mainPanel.add(new JLabel("Location :"));
         mainPanel.add(locationField);
-        mainPanel.add(new JLabel("Budget:"));
+        mainPanel.add(new JLabel("Budget :"));
         mainPanel.add(budgetField);
 
         JButton saveButton = new JButton("Save");
