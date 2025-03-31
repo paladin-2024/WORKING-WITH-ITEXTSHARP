@@ -1,6 +1,6 @@
 package gui.Panels;
 
-import database.DepartmentDAO;
+import database.DAO.DepartmentDAO;
 import gui.dialog.DepartmentDialog;
 import gui.TableModel.DepartmentTableModel;
 import model.Department;

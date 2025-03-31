@@ -9,9 +9,9 @@ import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.VerticalAlignment;
-
 import javax.swing.*;
 import javax.swing.table.TableModel;
 import java.io.File;
@@ -24,96 +24,129 @@ public class PDFExporter {
     private static PdfFont normalFont;
 
     static {
+        initializeFonts();
+    }
+
+    private static void initializeFonts() {
         try {
             titleFont = PdfFontFactory.createFont("Helvetica-Bold");
             normalFont = PdfFontFactory.createFont("Helvetica");
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null,
-                    "Error initializing fonts: " + e.getMessage(),
-                    "Font Error",
-                    JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
+            showFontError(e);
         }
     }
 
     public static void exportTableToPDF(JTable table, String title) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Specify a file to save");
+        File file = getSaveFile();
+        if (file == null) return;
 
-        int userSelection = fileChooser.showSaveDialog(null);
-        if (userSelection != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        File fileToSave = fileChooser.getSelectedFile();
-        String filePath = fileToSave.getAbsolutePath();
-
-        if (!filePath.toLowerCase().endsWith(".pdf")) {
-            filePath += ".pdf";
-        }
-
-        try (PdfWriter writer = new PdfWriter(filePath);
+        try (PdfWriter writer = new PdfWriter(file);
              PdfDocument pdf = new PdfDocument(writer);
              Document document = new Document(pdf)) {
 
-            Paragraph header = new Paragraph(title)
-                    .setFont(titleFont)
-                    .setFontSize(18)
-                    .setBold()
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginBottom(10);
-            document.add(header);
-
-            String formattedDate = LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"));
-            Paragraph date = new Paragraph("Report Date: " + formattedDate)
-                    .setFont(normalFont)
-                    .setFontSize(10)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginBottom(20);
-            document.add(date);
-
-            TableModel model = table.getModel();
-            float[] columnWidths = new float[model.getColumnCount()];
-            for (int i = 0; i < columnWidths.length; i++) {
-                columnWidths[i] = 1;
-            }
-
-            Table pdfTable = new Table(columnWidths);
-            pdfTable.setWidth(100);
-
-            for (int i = 0; i < model.getColumnCount(); i++) {
-                Cell headerCell = new Cell()
-                        .add(new Paragraph(model.getColumnName(i)))
-                        .setFont(titleFont)
-                        .setFontSize(12)
-                        .setBold()
-                        .setBackgroundColor(new DeviceRgb(211, 211, 211)) // Light Gray Background
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setVerticalAlignment(VerticalAlignment.MIDDLE);
-                pdfTable.addHeaderCell(headerCell);
-            }
-
-            for (int row = 0; row < model.getRowCount(); row++) {
-                for (int col = 0; col < model.getColumnCount(); col++) {
-                    Object value = model.getValueAt(row, col);
-                    Cell cell = new Cell()
-                            .add(new Paragraph(value != null ? value.toString() : ""))
-                            .setFont(normalFont)
-                            .setFontSize(10)
-                            .setTextAlignment(TextAlignment.CENTER)
-                            .setVerticalAlignment(VerticalAlignment.MIDDLE);
-                    pdfTable.addCell(cell);
-                }
-            }
-
+            addDocumentHeader(document, title);
+            Table pdfTable = createPdfTable(table.getModel());
             document.add(pdfTable);
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null,
-                    "Error exporting PDF: " + e.getMessage(),
-                    "Export Error",
-                    JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
+            showExportError(e);
         }
+    }
+
+    private static File getSaveFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        if (fileChooser.showSaveDialog(null) != JFileChooser.APPROVE_OPTION) return null;
+
+        File file = fileChooser.getSelectedFile();
+        if (!file.getName().toLowerCase().endsWith(".pdf")) {
+            return new File(file.getAbsolutePath() + ".pdf");
+        }
+        return file;
+    }
+
+    private static void addDocumentHeader(Document doc, String title) {
+        doc.add(createTitleParagraph(title));
+        doc.add(createDateParagraph());
+    }
+
+    private static Paragraph createTitleParagraph(String title) {
+        return new Paragraph(title)
+                .setFont(titleFont)
+                .setFontSize(18)
+                .setBold()
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(10);
+    }
+
+    private static Paragraph createDateParagraph() {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"));
+        return new Paragraph("Generated: " + date)
+                .setFont(normalFont)
+                .setFontSize(10)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(20);
+    }
+
+    private static Table createPdfTable(TableModel model) {
+        Table table = new Table(model.getColumnCount());
+        configureTableAppearance(table);
+        addTableHeaders(table, model);
+        addTableRows(table, model);
+        return table;
+    }
+
+    private static void configureTableAppearance(Table table) {
+        table.setWidth(100)
+                .setHorizontalAlignment(HorizontalAlignment.CENTER)
+                .setMarginTop(10)
+                .setMarginBottom(10);
+    }
+
+    private static void addTableHeaders(Table table, TableModel model) {
+        for (int i = 0; i < model.getColumnCount(); i++) {
+            table.addHeaderCell(createHeaderCell(model.getColumnName(i)));
+        }
+    }
+
+    private static Cell createHeaderCell(String text) {
+        return new Cell()
+                .add(new Paragraph(text))
+                .setFont(titleFont)
+                .setFontSize(12)
+                .setBold()
+                .setBackgroundColor(new DeviceRgb(211, 211, 211))
+                .setTextAlignment(TextAlignment.CENTER)
+                .setVerticalAlignment(VerticalAlignment.MIDDLE);
+    }
+
+    private static void addTableRows(Table table, TableModel model) {
+        for (int row = 0; row < model.getRowCount(); row++) {
+            for (int col = 0; col < model.getColumnCount(); col++) {
+                table.addCell(createDataCell(model.getValueAt(row, col)));
+            }
+        }
+    }
+
+    private static Cell createDataCell(Object value) {
+        return new Cell()
+                .add(new Paragraph(value != null ? value.toString() : ""))
+                .setFont(normalFont)
+                .setFontSize(10)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setVerticalAlignment(VerticalAlignment.MIDDLE);
+    }
+
+    private static void showFontError(IOException e) {
+        JOptionPane.showMessageDialog(null,
+                "Font initialization failed: " + e.getMessage(),
+                "PDF Export Error",
+                JOptionPane.ERROR_MESSAGE);
+    }
+
+    private static void showExportError(Exception e) {
+        JOptionPane.showMessageDialog(null,
+                "PDF Export Failed: " + e.getMessage(),
+                "Export Error",
+                JOptionPane.ERROR_MESSAGE);
     }
 }
