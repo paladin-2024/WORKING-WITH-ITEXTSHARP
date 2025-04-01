@@ -12,7 +12,7 @@ A robust Java Swing application for comprehensive employee and department manage
 - 📤 Professional PDF exports with formatted tables
 - 🛡️ Database integrity with MySQL constraints
 
-![Screenshot](output.png) <!-- Add actual screenshot path -->
+![Screenshot](output.png) 
 
 ---
 
