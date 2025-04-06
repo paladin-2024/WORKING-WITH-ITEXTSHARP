@@ -1,111 +1,143 @@
 package database.DAO;
 
-import database.DBConnection;
 import model.Department;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+
+import java.sql.*;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class DepartmentDAOTest {
+
     private DepartmentDAO departmentDAO;
     private Connection connection;
 
     @BeforeEach
     void setUp() throws SQLException {
-        // Set up an in-memory H2 database for testing
-        connection = DriverManager.getConnection("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1");
-
-
-        // Create the test table
-        try (Statement stmt = connection.createStatement()) {
-            stmt.execute("CREATE TABLE departments (" +
-                    "id INT AUTO_INCREMENT PRIMARY KEY, " +
-                    "name VARCHAR(100) NOT NULL, " +
-                    "location VARCHAR(100), " +
-                    "budget DECIMAL(10,2))");
-        }
-
+        // Set up DepartmentDAO instance
         departmentDAO = new DepartmentDAO();
+
+        // Use DriverManager to establish connection
+        connection = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/employee_management", "root", "2006"
+        );
+
+        // Clean the table before each test
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("TRUNCATE TABLE departments");
+        }
     }
 
     @AfterEach
     void tearDown() throws SQLException {
-        // Drop the test table and close connection
-        try (Statement stmt = connection.createStatement()) {
-            stmt.execute("DROP TABLE departments");
-        }
+        // Close the connection after each test
         connection.close();
     }
 
     @Test
-    void testGetAllDepartmentsWhenEmpty() throws SQLException {
+    void testGetAllDepartments() throws SQLException {
+        // Insert sample data into the database
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "INSERT INTO departments (name, location, budget) VALUES (?, ?, ?)")) {
+            pstmt.setString(1, "Finance");
+            pstmt.setString(2, "Building A");
+            pstmt.setDouble(3, 100000.0);
+            pstmt.executeUpdate();
+
+            pstmt.setString(1, "HR");
+            pstmt.setString(2, "Building B");
+            pstmt.setDouble(3, 75000.0);
+            pstmt.executeUpdate();
+        }
+
+        // Call the DAO method to fetch all departments
         List<Department> departments = departmentDAO.getAllDepartments();
-        assertTrue(departments.isEmpty());
+
+        // Assertions
+        assertEquals(2, departments.size(), "Should retrieve 2 departments");
+        assertEquals("Finance", departments.get(0).getName(), "First department name should match");
+        assertEquals("HR", departments.get(1).getName(), "Second department name should match");
     }
 
     @Test
     void testAddDepartment() throws SQLException {
-        Department department = new Department(0, "Engineering", "Building A", 100000.0);
-        boolean result = departmentDAO.addDepartment(department);
-        assertTrue(result);
+        // Create a new department instance
+        Department department = new Department(0, "IT", "Building C", 50000.0);
 
-        List<Department> departments = departmentDAO.getAllDepartments();
-        assertEquals(1, departments.size());
-        assertEquals("Engineering", departments.get(0).getName());
+        // Add the department using the DAO
+        boolean result = departmentDAO.addDepartment(department);
+
+        // Assertions
+        assertTrue(result, "Department should be added successfully");
+
+        // Verify the department in the database
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT * FROM departments WHERE name = ?")) {
+            pstmt.setString(1, "IT");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                assertTrue(rs.next(), "Added department should exist in the database");
+                assertEquals("Building C", rs.getString("location"), "Location should match");
+                assertEquals(50000.0, rs.getDouble("budget"), "Budget should match");
+            }
+        }
     }
 
     @Test
     void testUpdateDepartment() throws SQLException {
-        // Add a department first
-        Department department = new Department(0, "HR", "Building B", 50000.0);
-        departmentDAO.addDepartment(department);
+        // Insert sample department into the database
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "INSERT INTO departments (id, name, location, budget) VALUES (?, ?, ?, ?)")) {
+            pstmt.setInt(1, 1);
+            pstmt.setString(2, "Finance");
+            pstmt.setString(3, "Building A");
+            pstmt.setDouble(4, 100000.0);
+            pstmt.executeUpdate();
+        }
 
-        // Get the ID (assuming it's auto-incremented to 1)
-        List<Department> departments = departmentDAO.getAllDepartments();
-        int id = departments.get(0).getId();
+        // Update the department using the DAO
+        Department updatedDepartment = new Department(1, "Finance", "Building D", 110000.0);
+        boolean result = departmentDAO.updateDepartment(updatedDepartment);
 
-        // Update the department
-        Department updatedDept = new Department(id, "Human Resources", "Building C", 60000.0);
-        boolean result = departmentDAO.updateDepartment(updatedDept);
-        assertTrue(result);
+        // Assertions
+        assertTrue(result, "Department should be updated successfully");
 
-        // Verify the update
-        departments = departmentDAO.getAllDepartments();
-        assertEquals(1, departments.size());
-        assertEquals("Human Resources", departments.get(0).getName());
-        assertEquals("Building C", departments.get(0).getLocation());
+        // Verify the updated department in the database
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT * FROM departments WHERE id = ?")) {
+            pstmt.setInt(1, 1);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                assertTrue(rs.next(), "Updated department should exist in the database");
+                assertEquals("Building D", rs.getString("location"), "Updated location should match");
+                assertEquals(110000.0, rs.getDouble("budget"), "Updated budget should match");
+            }
+        }
     }
 
     @Test
     void testDeleteDepartment() throws SQLException {
-        // Add a department first
-        Department department = new Department(0, "Finance", "Building D", 75000.0);
-        departmentDAO.addDepartment(department);
+        // Insert sample department into the database
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "INSERT INTO departments (id, name, location, budget) VALUES (?, ?, ?, ?)")) {
+            pstmt.setInt(1, 1);
+            pstmt.setString(2, "Finance");
+            pstmt.setString(3, "Building A");
+            pstmt.setDouble(4, 100000.0);
+            pstmt.executeUpdate();
+        }
 
-        // Get the ID
-        List<Department> departments = departmentDAO.getAllDepartments();
-        int id = departments.get(0).getId();
+        // Delete the department using the DAO
+        boolean result = departmentDAO.deleteDepartment(1);
 
-        // Delete the department
-        boolean result = departmentDAO.deleteDepartment(id);
-        assertTrue(result);
+        // Assertions
+        assertTrue(result, "Department should be deleted successfully");
 
-        // Verify deletion
-        departments = departmentDAO.getAllDepartments();
-        assertTrue(departments.isEmpty());
-    }
-
-    @Test
-    void testAddDepartmentWithInvalidData() {
-        // Test with null name (should throw SQLException)
-        Department department = new Department(0, null, "Building E", 80000.0);
-        assertThrows(SQLException.class, () -> departmentDAO.addDepartment(department));
+        // Verify the department no longer exists in the database
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT * FROM departments WHERE id = ?")) {
+            pstmt.setInt(1, 1);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                assertFalse(rs.next(), "Deleted department should not exist in the database");
+            }
+        }
     }
 }

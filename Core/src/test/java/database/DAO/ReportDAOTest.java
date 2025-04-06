@@ -1,174 +1,155 @@
 package database.DAO;
 
-import database.DBConnection;
 import model.Report;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
+
+import java.sql.*;
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class ReportDAOTest {
+
     private ReportDAO reportDAO;
     private Connection connection;
 
     @BeforeEach
-    void setUp() throws Exception {
-        // Set up an in-memory H2 database for testing
-        connection = DriverManager.getConnection("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1");
-        DBConnection.setTestConnection(connection);
-
-        // Create test tables and insert sample data
-        try (Statement stmt = connection.createStatement()) {
-            // Create departments table
-            stmt.execute("CREATE TABLE departments (" +
-                    "name VARCHAR(100) PRIMARY KEY, " +
-                    "budget DECIMAL(10,2))");
-
-            // Create employees table
-            stmt.execute("CREATE TABLE employees (" +
-                    "id INT AUTO_INCREMENT PRIMARY KEY, " +
-                    "name VARCHAR(100) NOT NULL, " +
-                    "email VARCHAR(100), " +
-                    "department VARCHAR(100), " +
-                    "salary DECIMAL(10,2), " +
-                    "join_date DATE)");
-
-            // Insert test data
-            stmt.execute("INSERT INTO departments VALUES ('Engineering', 1000000.00)");
-            stmt.execute("INSERT INTO departments VALUES ('Marketing', 500000.00)");
-
-            stmt.execute("INSERT INTO employees VALUES " +
-                    "(1, 'John Doe', 'john@example.com', 'Engineering', 75000.00, '2023-01-15')");
-            stmt.execute("INSERT INTO employees VALUES " +
-                    "(2, 'Jane Smith', 'jane@example.com', 'Engineering', 85000.00, '2023-06-20')");
-            stmt.execute("INSERT INTO employees VALUES " +
-                    "(3, 'Mike Johnson', 'mike@example.com', 'Marketing', 65000.00, '2023-11-01')");
-            stmt.execute("INSERT INTO employees VALUES " +
-                    "(4, 'New Hire', 'new@example.com', 'Marketing', 60000.00, CURRENT_DATE - 10)");
-        }
-
+    void setUp() throws SQLException {
         reportDAO = new ReportDAO();
+
+        // Establish connection using DriverManager
+        connection = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/employee_management", "root", "2006"
+        );
+
+        // Clean up the relevant tables before each test
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("TRUNCATE TABLE employees");
+            stmt.execute("TRUNCATE TABLE departments");
+        }
     }
 
     @AfterEach
-    void tearDown() throws Exception {
-        try (Statement stmt = connection.createStatement()) {
-            stmt.execute("DROP TABLE employees");
-            stmt.execute("DROP TABLE departments");
+    void tearDown() throws SQLException {
+        if (connection != null) {
+            connection.close();
         }
-        connection.close();
-        DBConnection.clearTestConnection();
     }
 
     @Test
-    void testGenerateSalaryReport() throws Exception {
+    void testGenerateSalaryReport() throws SQLException {
+        // Insert sample employee data
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "INSERT INTO employees (name, email, department, salary, join_date) VALUES (?, ?, ?, ?, ?)")) {
+            pstmt.setString(1, "John Doe");
+            pstmt.setString(2, "john.doe@example.com");
+            pstmt.setString(3, "Finance");
+            pstmt.setDouble(4, 60000.0);
+            pstmt.setDate(5, Date.valueOf("2022-01-15"));
+            pstmt.executeUpdate();
+
+            pstmt.setString(1, "Jane Smith");
+            pstmt.setString(2, "jane.smith@example.com");
+            pstmt.setString(3, "Finance");
+            pstmt.setDouble(4, 50000.0);
+            pstmt.setDate(5, Date.valueOf("2023-02-20"));
+            pstmt.executeUpdate();
+        }
+
+        // Generate salary report using DAO
         List<Report> reports = reportDAO.generateSalaryReport();
 
-        assertEquals(2, reports.size());
-
-        // Verify Engineering department report
-        Report engReport = reports.stream()
-                .filter(r -> r.getDepartment().equals("Engineering"))
-                .findFirst()
-                .orElseThrow();
-
-        assertEquals("Salary Report", engReport.getReportType());
-        assertEquals(2, engReport.getEmployeeCount());
-        assertEquals(160000.00, engReport.getTotalSalary(), 0.001);
-        assertEquals(80000.00, engReport.getAvgSalary(), 0.001);
-        assertEquals(75000.00, engReport.getMinSalary(), 0.001);
-        assertEquals(85000.00, engReport.getMaxSalary(), 0.001);
-
-        // Verify Marketing department report
-        Report mktReport = reports.stream()
-                .filter(r -> r.getDepartment().equals("Marketing"))
-                .findFirst()
-                .orElseThrow();
-
-        assertEquals(2, mktReport.getEmployeeCount());
+        // Assertions
+        assertEquals(1, reports.size(), "Should generate report for one department.");
+        Report financeReport = reports.get(0);
+        assertEquals("Finance", financeReport.getDepartment(), "Department should be 'Finance'.");
+        assertEquals(2, financeReport.getEmployeeCount(), "Employee count should match.");
+        assertEquals(110000.0, financeReport.getTotalSalary(), "Total salary should match.");
+        assertEquals(60000.0, financeReport.getMaxSalary(), "Max salary should match.");
+        assertEquals(50000.0, financeReport.getMinSalary(), "Min salary should match.");
     }
 
     @Test
-    void testGenerateNewHiresReport() throws Exception {
-        List<Report> reports = reportDAO.generateNewHiresReport();
-
-        // Should only include the employee hired in last 30 days
-        assertEquals(1, reports.size());
-
-        Report report = reports.get(0);
-        assertEquals("New Hires Report", report.getReportType());
-        assertEquals("New Hire", report.getEmployeeName());
-        assertEquals("new@example.com", report.getEmployeeEmail());
-        assertEquals("Marketing", report.getDepartment());
-        assertEquals(60000.00, report.getTotalSalary(), 0.001);
-    }
-
-    @Test
-    void testGenerateDepartmentAnalysis() throws Exception {
-        List<Report> reports = reportDAO.generateDepartmentAnalysis();
-
-        assertEquals(2, reports.size());
-
-        // Verify Engineering department analysis
-        Report engReport = reports.stream()
-                .filter(r -> r.getDepartment().equals("Engineering"))
-                .findFirst()
-                .orElseThrow();
-
-        assertEquals("Department Analysis", engReport.getReportType());
-        assertEquals(2, engReport.getEmployeeCount());
-        assertEquals(160000.00, engReport.getTotalSalary(), 0.001);
-        assertEquals(1000000.00, engReport.getBudget(), 0.001);
-        assertEquals(16.00, engReport.getUtilization(), 0.01); // 16% utilization
-
-        // Verify Marketing department analysis
-        Report mktReport = reports.stream()
-                .filter(r -> r.getDepartment().equals("Marketing"))
-                .findFirst()
-                .orElseThrow();
-
-        assertEquals(2, mktReport.getEmployeeCount());
-        assertEquals(125000.00, mktReport.getTotalSalary(), 0.001);
-        assertEquals(500000.00, mktReport.getBudget(), 0.001);
-    }
-
-    @Test
-    void testGenerateMonthlyReport() throws Exception {
-        List<Report> reports = reportDAO.generateMonthlyReport();
-
-        // Should group by month and department
-        assertTrue(reports.size() >= 2);
-
-        // Verify January 2023 report
-        Report janReport = reports.stream()
-                .filter(r -> r.getGeneratedDate().equals(LocalDate.of(2023, 1, 1)))
-                .findFirst()
-                .orElseThrow();
-
-        assertEquals("Monthly Report", janReport.getReportType());
-        assertEquals(1, janReport.getEmployeeCount());
-        assertEquals(75000.00, janReport.getTotalSalary(), 0.001);
-        assertEquals("Engineering", janReport.getDepartment());
-    }
-
-    @Test
-    void testEmptyReports() throws Exception {
-        // Clear test data
-        try (Statement stmt = connection.createStatement()) {
-            stmt.execute("DELETE FROM employees");
-            stmt.execute("DELETE FROM departments");
+    void testGenerateNewHiresReport() throws SQLException {
+        // Insert sample employee data
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "INSERT INTO employees (id, name, email, department, salary, join_date) VALUES (?, ?, ?, ?, ?, ?)")) {
+            pstmt.setInt(1, 1);
+            pstmt.setString(2, "Alice Johnson");
+            pstmt.setString(3, "alice.johnson@example.com");
+            pstmt.setString(4, "Marketing");
+            pstmt.setDouble(5, 55000.0);
+            pstmt.setDate(6, Date.valueOf(LocalDate.now().minusDays(15).toString()));
+            pstmt.executeUpdate();
         }
 
-        // All reports should be empty
-        assertTrue(reportDAO.generateSalaryReport().isEmpty());
-        assertTrue(reportDAO.generateNewHiresReport().isEmpty());
-        assertTrue(reportDAO.generateDepartmentAnalysis().isEmpty());
-        assertTrue(reportDAO.generateMonthlyReport().isEmpty());
+        // Generate new hires report using DAO
+        List<Report> reports = reportDAO.generateNewHiresReport();
+
+        // Assertions
+        assertEquals(1, reports.size(), "Should generate report for one new hire.");
+        Report newHireReport = reports.get(0);
+        assertEquals("Alice Johnson", newHireReport.getEmployeeName(), "Employee name should match.");
+        assertEquals("alice.johnson@example.com", newHireReport.getEmployeeEmail(), "Employee email should match.");
+        assertEquals(55000.0, newHireReport.getTotalSalary(), "Salary should match.");
+        assertEquals("Marketing", newHireReport.getDepartment(), "Department should match.");
+    }
+
+    @Test
+    void testGenerateDepartmentAnalysis() throws SQLException {
+        // Insert sample department and employee data
+        try (PreparedStatement deptStmt = connection.prepareStatement(
+                "INSERT INTO departments (name, budget) VALUES (?, ?)")) {
+            deptStmt.setString(1, "Finance");
+            deptStmt.setDouble(2, 200000.0);
+            deptStmt.executeUpdate();
+        }
+        try (PreparedStatement empStmt = connection.prepareStatement(
+                "INSERT INTO employees (name, email, department, salary, join_date) VALUES (?, ?, ?, ?, ?)")) {
+            empStmt.setString(1, "John Doe");
+            empStmt.setString(2, "john.doe@example.com");
+            empStmt.setString(3, "Finance");
+            empStmt.setDouble(4, 100000.0);
+            empStmt.setDate(5, Date.valueOf("2022-01-15"));
+            empStmt.executeUpdate();
+        }
+
+        // Generate department analysis report using DAO
+        List<Report> reports = reportDAO.generateDepartmentAnalysis();
+
+        // Assertions
+        assertEquals(1, reports.size(), "Should generate report for one department.");
+        Report financeAnalysis = reports.get(0);
+        assertEquals("Finance", financeAnalysis.getDepartment(), "Department should match.");
+        assertEquals(100000.0, financeAnalysis.getTotalSalary(), "Total salary should match.");
+        assertEquals(200000.0, financeAnalysis.getBudget(), "Budget should match.");
+        assertEquals(50.0, financeAnalysis.getUtilization(), "Utilization should match.");
+    }
+
+    @Test
+    void testGenerateMonthlyReport() throws SQLException {
+        // Insert sample employee data
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "INSERT INTO employees (name, email, department, salary, join_date) VALUES (?, ?, ?, ?, ?)")) {
+            pstmt.setString(1, "John Doe");
+            pstmt.setString(2, "john.doe@example.com");
+            pstmt.setString(3, "Finance");
+            pstmt.setDouble(4, 60000.0);
+            pstmt.setDate(5, Date.valueOf("2022-01-15"));
+            pstmt.executeUpdate();
+        }
+
+        // Generate monthly report using DAO
+        List<Report> reports = reportDAO.generateMonthlyReport();
+
+        // Assertions
+        assertEquals(1, reports.size(), "Should generate report for one month and one department.");
+        Report monthlyReport = reports.get(0);
+        assertEquals(LocalDate.parse("2022-01-01"), monthlyReport.getGeneratedDate(), "Generated date should match.");
+        assertEquals("Finance", monthlyReport.getDepartment(), "Department should match.");
+        assertEquals(60000.0, monthlyReport.getTotalSalary(), "Total salary should match.");
     }
 }

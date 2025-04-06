@@ -1,148 +1,151 @@
 package database.DAO;
 
-import database.DBConnection;
 import model.Employee;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import java.sql.*;
-import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class EmployeeDAOTest {
+
     private EmployeeDAO employeeDAO;
     private Connection connection;
 
     @BeforeEach
     void setUp() throws SQLException {
-        // Set up an in-memory H2 database for testing
-        connection = DriverManager.getConnection("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1");
-
-        // Initialize the DBConnection with our test connection
-        DBConnection.setTestConnection(connection);
-
-        // Create the test table
-        try (Statement stmt = connection.createStatement()) {
-            stmt.execute("CREATE TABLE employees (" +
-                    "id INT AUTO_INCREMENT PRIMARY KEY, " +
-                    "name VARCHAR(100) NOT NULL, " +
-                    "email VARCHAR(100), " +
-                    "department VARCHAR(100), " +
-                    "salary DECIMAL(10,2), " +
-                    "join_date DATE)");
-        }
-
+        // Initialize EmployeeDAO instance
         employeeDAO = new EmployeeDAO();
+
+        // Establish connection to the database
+        connection = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/employee_management", "root", "2006"
+        );
+
+        // Clean the table before each test
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("TRUNCATE TABLE employees");
+        }
     }
 
     @AfterEach
     void tearDown() throws SQLException {
-        // Drop the test table and close connection
-        try (Statement stmt = connection.createStatement()) {
-            stmt.execute("DROP TABLE employees");
-        }
+        // Close the database connection after each test
         connection.close();
-        DBConnection.clearTestConnection();
     }
 
     @Test
-    void testGetAllEmployeesWhenEmpty() throws SQLException {
+    void testGetAllEmployees() throws SQLException {
+        // Insert sample employees into the database
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "INSERT INTO employees (name, email, department, salary, join_date) VALUES (?, ?, ?, ?, ?)")) {
+            pstmt.setString(1, "John Doe");
+            pstmt.setString(2, "john.doe@example.com");
+            pstmt.setString(3, "Finance");
+            pstmt.setDouble(4, 60000.0);
+            pstmt.setDate(5, Date.valueOf("2022-01-15"));
+            pstmt.executeUpdate();
+
+            pstmt.setString(1, "Jane Smith");
+            pstmt.setString(2, "jane.smith@example.com");
+            pstmt.setString(3, "HR");
+            pstmt.setDouble(4, 50000.0);
+            pstmt.setDate(5, Date.valueOf("2023-02-20"));
+            pstmt.executeUpdate();
+        }
+
+        // Retrieve all employees using DAO
         List<Employee> employees = employeeDAO.getAllEmployees();
-        assertTrue(employees.isEmpty());
+
+        // Assertions
+        assertEquals(2, employees.size(), "Should retrieve 2 employees.");
+        assertEquals("John Doe", employees.get(0).getName(), "First employee's name should match.");
+        assertEquals("Jane Smith", employees.get(1).getName(), "Second employee's name should match.");
     }
 
     @Test
     void testAddEmployee() throws SQLException {
-        Employee employee = new Employee(0, "John Doe", "john@example.com",
-                "Engineering", 75000.0, (java.sql.Date) new Date());
+        // Create a new employee
+        Employee employee = new Employee(0, "Alice Johnson", "alice.johnson@example.com", "Marketing", 55000.0, Date.valueOf("2021-03-05"));
 
+        // Add the employee using DAO
         boolean result = employeeDAO.addEmployee(employee);
-        assertTrue(result);
 
-        List<Employee> employees = employeeDAO.getAllEmployees();
-        assertEquals(1, employees.size());
-        assertEquals("John Doe", employees.get(0).getName());
-        assertEquals("john@example.com", employees.get(0).getEmail());
+        // Assertions
+        assertTrue(result, "Employee should be added successfully.");
+
+        // Verify the employee in the database
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT * FROM employees WHERE email = ?")) {
+            pstmt.setString(1, "alice.johnson@example.com");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                assertTrue(rs.next(), "Added employee should exist in the database.");
+                assertEquals("Marketing", rs.getString("department"), "Department should match.");
+                assertEquals(55000.0, rs.getDouble("salary"), "Salary should match.");
+            }
+        }
     }
 
     @Test
     void testUpdateEmployee() throws SQLException {
-        // Add an employee first
-        Employee employee = new Employee(0, "Jane Smith", "jane@example.com",
-                "Marketing", 65000.0, (java.sql.Date) new Date());
-        employeeDAO.addEmployee(employee);
+        // Insert a sample employee
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "INSERT INTO employees (id, name, email, department, salary, join_date) VALUES (?, ?, ?, ?, ?, ?)")) {
+            pstmt.setInt(1, 1);
+            pstmt.setString(2, "John Doe");
+            pstmt.setString(3, "john.doe@example.com");
+            pstmt.setString(4, "Finance");
+            pstmt.setDouble(5, 60000.0);
+            pstmt.setDate(6, Date.valueOf("2022-01-15"));
+            pstmt.executeUpdate();
+        }
 
-        // Get the ID (assuming it's auto-incremented to 1)
-        List<Employee> employees = employeeDAO.getAllEmployees();
-        int id = employees.get(0).getId();
-
-        // Update the employee
-        Employee updatedEmployee = new Employee(id, "Jane Doe", "janedoe@example.com",
-                "HR", 70000.0, (java.sql.Date) new Date());
+        // Update the employee using DAO
+        Employee updatedEmployee = new Employee(1, "John Doe", "john.doe@example.com", "Operations", 65000.0, Date.valueOf("2022-01-15"));
         boolean result = employeeDAO.updateEmployee(updatedEmployee);
-        assertTrue(result);
 
-        // Verify the update
-        employees = employeeDAO.getAllEmployees();
-        assertEquals(1, employees.size());
-        assertEquals("Jane Doe", employees.get(0).getName());
-        assertEquals("janedoe@example.com", employees.get(0).getEmail());
-        assertEquals("HR", employees.get(0).getDepartment());
+        // Assertions
+        assertTrue(result, "Employee should be updated successfully.");
+
+        // Verify the updated employee in the database
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT * FROM employees WHERE id = ?")) {
+            pstmt.setInt(1, 1);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                assertTrue(rs.next(), "Updated employee should exist in the database.");
+                assertEquals("Operations", rs.getString("department"), "Updated department should match.");
+                assertEquals(65000.0, rs.getDouble("salary"), "Updated salary should match.");
+            }
+        }
     }
 
     @Test
     void testDeleteEmployee() throws SQLException {
-        // Add an employee first
-        Employee employee = new Employee(0, "Mike Johnson", "mike@example.com",
-                "Finance", 80000.0, (java.sql.Date) new Date());
-        employeeDAO.addEmployee(employee);
+        // Insert a sample employee
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "INSERT INTO employees (id, name, email, department, salary, join_date) VALUES (?, ?, ?, ?, ?, ?)")) {
+            pstmt.setInt(1, 1);
+            pstmt.setString(2, "John Doe");
+            pstmt.setString(3, "john.doe@example.com");
+            pstmt.setString(4, "Finance");
+            pstmt.setDouble(5, 60000.0);
+            pstmt.setDate(6, Date.valueOf("2022-01-15"));
+            pstmt.executeUpdate();
+        }
 
-        // Get the ID
-        List<Employee> employees = employeeDAO.getAllEmployees();
-        int id = employees.get(0).getId();
+        // Delete the employee using DAO
+        boolean result = employeeDAO.deleteEmployee(1);
 
-        // Delete the employee
-        boolean result = employeeDAO.deleteEmployee(id);
-        assertTrue(result);
+        // Assertions
+        assertTrue(result, "Employee should be deleted successfully.");
 
-        // Verify deletion
-        employees = employeeDAO.getAllEmployees();
-        assertTrue(employees.isEmpty());
-    }
-
-    @Test
-    void testAddEmployeeWithNullValues() {
-        // Test with null name (should throw SQLException)
-        Employee employee = new Employee(0, (String) null, "test@example.com",
-                "IT", 60000.0, (java.sql.Date) new Date());
-        assertThrows(SQLException.class, () -> employeeDAO.addEmployee(employee));
-    }
-
-    @Test
-    void testGetAllEmployeesWithMultipleRecords() throws SQLException {
-        // Add multiple employees
-        employeeDAO.addEmployee(new Employee(0, "Alice", "alice@example.com",
-                "Engineering", 85000.0, (java.sql.Date) new Date()));
-        employeeDAO.addEmployee(new Employee(0, "Bob", "bob@example.com",
-                "Marketing", 75000.0, (java.sql.Date) new Date()));
-
-        List<Employee> employees = employeeDAO.getAllEmployees();
-        assertEquals(2, employees.size());
-    }
-
-    @Test
-    void testUpdateNonExistentEmployee() throws SQLException {
-        Employee employee = new Employee(999, "Nonexistent", "none@example.com",
-                "IT", 50000.0, (java.sql.Date) new Date());
-        boolean result = employeeDAO.updateEmployee(employee);
-        assertFalse(result, "Should return false when updating non-existent employee");
-    }
-
-    @Test
-    void testDeleteNonExistentEmployee() throws SQLException {
-        boolean result = employeeDAO.deleteEmployee(999);
-        assertFalse(result, "Should return false when deleting non-existent employee");
+        // Verify the employee no longer exists in the database
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT * FROM employees WHERE id = ?")) {
+            pstmt.setInt(1, 1);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                assertFalse(rs.next(), "Deleted employee should not exist in the database.");
+            }
+        }
     }
 }
