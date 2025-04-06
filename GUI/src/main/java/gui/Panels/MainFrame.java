@@ -4,8 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 
 public class MainFrame {
-    private JFrame frame;
-    private JTabbedPane tabbedPane;
+    JFrame frame;
+    JTabbedPane tabbedPane;
     private EmployeePanel employeePanel;
     private DepartmentPanel departmentPanel;
     private ReportPanel reportPanel;
