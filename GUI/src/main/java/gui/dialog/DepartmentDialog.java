@@ -6,12 +6,12 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 
 public class DepartmentDialog {
-    private final JDialog dialog;
-    private final JTextField nameField;
-    private final JTextField locationField;
-    private final JTextField budgetField;
+    final JDialog dialog;
+    final JTextField nameField;
+    final JTextField locationField;
+    final JTextField budgetField;
     private final Department department;
-    private boolean confirmed;
+    boolean confirmed;
 
     public DepartmentDialog(JFrame parent) {
         this(parent, new Department());
@@ -69,7 +69,7 @@ public class DepartmentDialog {
         // Add any additional listeners here
     }
 
-    private void handleSave(ActionEvent e) {
+    void handleSave(ActionEvent e) {
         if (validateInput()) {
             confirmed = true;
             updateDepartmentFromFields();
@@ -77,7 +77,7 @@ public class DepartmentDialog {
         }
     }
 
-    private boolean validateInput() {
+    boolean validateInput() {
         try {
             Double.parseDouble(budgetField.getText());
             return !nameField.getText().trim().isEmpty();
@@ -89,7 +89,7 @@ public class DepartmentDialog {
         }
     }
 
-    private void updateDepartmentFromFields() {
+    void updateDepartmentFromFields() {
         department.setName(nameField.getText().trim());
         department.setLocation(locationField.getText().trim());
         department.setBudget(Double.parseDouble(budgetField.getText()));
