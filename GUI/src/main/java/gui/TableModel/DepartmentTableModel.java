@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DepartmentTableModel extends AbstractTableModel {
-    private final List<Department> departments = new ArrayList<>();
+    protected final List<Department> departments = new ArrayList<>();
     private final String[] columnNames = {"ID", "Name", "Location", "Budget"};
 
     public void setDepartments(List<Department> departments) {

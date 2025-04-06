@@ -10,7 +10,7 @@ public class ReportTableModel extends AbstractTableModel {
     private final DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM yyyy");
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
     private List<Report> reports = new ArrayList<>();
-    private String[] columns = new String[0];
+    String[] columns = new String[0];
 
     public void setReports(List<Report> reports) {
         this.reports = reports;

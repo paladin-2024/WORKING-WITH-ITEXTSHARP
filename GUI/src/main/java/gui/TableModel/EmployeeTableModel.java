@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class EmployeeTableModel extends AbstractTableModel {
-    private final List<Employee> employees = new ArrayList<>();
+    protected final List<Employee> employees = new ArrayList<>();
     private final String[] columnNames = {"ID", "Name", "Email", "Department", "Salary", "Join Date"};
 
     public void setEmployees(List<Employee> employees) {
