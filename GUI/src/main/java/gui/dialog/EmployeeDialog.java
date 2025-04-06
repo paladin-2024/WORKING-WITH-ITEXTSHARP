@@ -7,12 +7,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class EmployeeDialog extends JDialog {
-    private JTextField nameField;
-    private JTextField emailField;
-    private JTextField departmentField;
-    private JTextField salaryField;
-    private JTextField joinDateField;
-    private boolean confirmed = false;
+    JTextField nameField;
+    JTextField emailField;
+    JTextField departmentField;
+    JTextField salaryField;
+    JTextField joinDateField;
+    boolean confirmed = false;
     private Employee employee;
 
     public EmployeeDialog(JFrame parent) {
@@ -70,7 +70,7 @@ public class EmployeeDialog extends JDialog {
         setLocationRelativeTo(getParent());
     }
 
-    private boolean validateInput() {
+    boolean validateInput() {
         try {
             employee.setName(nameField.getText());
             employee.setEmail(emailField.getText());
