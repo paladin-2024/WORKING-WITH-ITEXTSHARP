@@ -7,7 +7,7 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class ReportTest {
+class ReportPanelTest {
 
     @Test
     void testCreateSalaryReport() {
