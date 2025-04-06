@@ -15,10 +15,10 @@ public class Report {
     private final String employeeEmail;
 
     // Unified constructor
-    private Report(int id, String reportType, LocalDate generatedDate,
-                   int employeeCount, double totalSalary, String department,
-                   Double metric1, Double metric2, Double metric3,
-                   String employeeName, String employeeEmail) {
+    public Report(int id, String reportType, LocalDate generatedDate,
+                  int employeeCount, double totalSalary, String department,
+                  Double metric1, Double metric2, Double metric3,
+                  String employeeName, String employeeEmail) {
         this.id = id;
         this.reportType = reportType;
         this.generatedDate = generatedDate;
