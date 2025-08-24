@@ -70,3 +70,6 @@ A robust Java Swing application for comprehensive employee and department manage
 1. Clone repository
 ```bash
 git clone https://github.com/paladin-2024/WORKING-WITH-ITEXTSHARP.git
+```
+2. puut it in any repository of your choice
+
