@@ -11,6 +11,7 @@ A robust Java Swing application for comprehensive employee and department manage
 - 📊 Dynamic report generation (Salary, New Hires, Department Analysis, Monthly)
 - 📤 Professional PDF exports with formatted tables
 - 🛡️ Database integrity with MySQL constraints
+- 💻 Sleek modern Desktop design
 
 ![Screenshot](output.png) 
 
